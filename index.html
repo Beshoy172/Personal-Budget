@@ -1,0 +1,1883 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>2 Bac Expense Tracker</title>
+
+    <!-- Google Font: Cairo -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        * {
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            background: #f8fafc;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .expense-row {
+            transition: 0.2s ease;
+        }
+
+        .expense-row:hover {
+            background: #f8fafc;
+        }
+
+        .modal {
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.97);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .toast {
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body class="text-slate-800 min-h-screen">
+
+    <!-- ================= HEADER ================= -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+            <div class="h-20 flex items-center justify-between gap-4">
+
+                <!-- Logo -->
+                <div class="flex items-center gap-3">
+
+                    <div class="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-200">
+                        <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+                    </div>
+
+                    <div>
+                        <h1 class="font-extrabold text-lg sm:text-xl text-slate-900">
+                            مصاريفي
+                        </h1>
+
+                        <p class="text-xs text-slate-500">
+                            تتبع المصاريف
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- Header Buttons -->
+                <div class="flex items-center gap-2">
+
+                    <button
+                        onclick="exportData()"
+                        class="hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition text-sm font-semibold">
+
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        تصدير
+                    </button>
+
+                    <label
+                        class="hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition cursor-pointer text-sm font-semibold">
+
+                        <i data-lucide="upload" class="w-4 h-4"></i>
+                        استيراد
+
+                        <input
+                            type="file"
+                            id="importFile"
+                            accept=".json"
+                            class="hidden"
+                            onchange="importData(event)">
+                    </label>
+
+                    <button
+                        onclick="openModal()"
+                        class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition shadow-md shadow-indigo-200 text-sm font-bold">
+
+                        <i data-lucide="plus" class="w-5 h-5"></i>
+                        <span class="hidden sm:inline">إضافة مصروف</span>
+                        <span class="sm:hidden">إضافة</span>
+
+                    </button>
+
+                </div>
+            </div>
+
+        </div>
+    </header>
+
+
+    <!-- ================= MAIN ================= -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- Welcome -->
+        <section class="mb-8">
+
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-2">
+                أهلاً بك 👋
+            </h2>
+
+            <p class="text-slate-500">
+                تابع مصاريفك الدراسية وحافظ على ميزانيتك بشكل بسيط.
+            </p>
+
+        </section>
+
+
+        <!-- ================= STATISTICS ================= -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+
+            <!-- Total -->
+            <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+
+                <div class="flex items-start justify-between">
+
+                    <div>
+
+                        <p class="text-sm text-slate-500 mb-2">
+                            إجمالي المصاريف
+                        </p>
+
+                        <h3
+                            id="totalAmount"
+                            class="text-2xl font-extrabold text-slate-900">
+                            0.00
+                        </h3>
+
+                        <p class="text-xs text-slate-400 mt-1">
+                            بالعملة المحلية
+                        </p>
+
+                    </div>
+
+                    <div class="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                        <i data-lucide="wallet" class="w-5 h-5"></i>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Highest Category -->
+            <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+
+                <div class="flex items-start justify-between">
+
+                    <div class="min-w-0">
+
+                        <p class="text-sm text-slate-500 mb-2">
+                            أعلى تصنيف إنفاقاً
+                        </p>
+
+                        <h3
+                            id="topCategory"
+                            class="text-lg font-extrabold text-slate-900 truncate">
+                            لا يوجد
+                        </h3>
+
+                        <p
+                            id="topCategoryAmount"
+                            class="text-xs text-slate-400 mt-1">
+                            0.00
+                        </p>
+
+                    </div>
+
+                    <div class="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                        <i data-lucide="trending-up" class="w-5 h-5"></i>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Transactions -->
+            <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+
+                <div class="flex items-start justify-between">
+
+                    <div>
+
+                        <p class="text-sm text-slate-500 mb-2">
+                            عدد العمليات
+                        </p>
+
+                        <h3
+                            id="transactionCount"
+                            class="text-2xl font-extrabold text-slate-900">
+                            0
+                        </h3>
+
+                        <p class="text-xs text-slate-400 mt-1">
+                            عملية مسجلة
+                        </p>
+
+                    </div>
+
+                    <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                        <i data-lucide="receipt" class="w-5 h-5"></i>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================= FILTERS ================= -->
+        <section class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm mb-6">
+
+            <div class="flex flex-col lg:flex-row lg:items-end gap-4">
+
+                <!-- Month -->
+                <div class="flex-1">
+
+                    <label
+                        for="monthFilter"
+                        class="block text-sm font-semibold text-slate-700 mb-2">
+                        الشهر
+                    </label>
+
+                    <input
+                        type="month"
+                        id="monthFilter"
+                        onchange="renderExpenses()"
+                        class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+
+
+                <!-- Category -->
+                <div class="flex-1">
+
+                    <label
+                        for="categoryFilter"
+                        class="block text-sm font-semibold text-slate-700 mb-2">
+                        التصنيف
+                    </label>
+
+                    <select
+                        id="categoryFilter"
+                        onchange="renderExpenses()"
+                        class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white outline-none focus:ring-2 focus:ring-indigo-500">
+
+                        <option value="all">
+                            جميع التصنيفات
+                        </option>
+
+                        <option value="الدروس الخصوصية">
+                            الدروس الخصوصية
+                        </option>
+
+                        <option value="الكتب والمذكرات">
+                            الكتب والمذكرات
+                        </option>
+
+                        <option value="الأدوات المكتبية">
+                            الأدوات المكتبية
+                        </option>
+
+                        <option value="الاشتراكات والإنترنت">
+                            الاشتراكات والإنترنت
+                        </option>
+
+                        <option value="مصاريف أخرى">
+                            مصاريف أخرى
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- Reset -->
+                <button
+                    onclick="resetFilters()"
+                    class="px-5 py-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition font-semibold text-sm flex items-center justify-center gap-2">
+
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    إعادة التصفية
+
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================= EXPENSES ================= -->
+        <section class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+
+            <!-- Section Header -->
+            <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+
+                <div>
+
+                    <h2 class="text-lg font-extrabold text-slate-900">
+                        المصاريف
+                    </h2>
+
+                    <p class="text-sm text-slate-500">
+                        جميع العمليات المسجلة
+                    </p>
+
+                </div>
+
+                <button
+                    onclick="openModal()"
+                    class="self-start sm:self-auto px-4 py-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl font-bold text-sm flex items-center gap-2">
+
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    مصروف جديد
+
+                </button>
+
+            </div>
+
+
+            <!-- Desktop Table -->
+            <div class="hidden md:block overflow-x-auto">
+
+                <table class="w-full text-right">
+
+                    <thead class="bg-slate-50 border-b border-slate-200">
+
+                        <tr>
+
+                            <th class="px-5 py-4 text-sm font-bold text-slate-600">
+                                الوصف
+                            </th>
+
+                            <th class="px-5 py-4 text-sm font-bold text-slate-600">
+                                التصنيف
+                            </th>
+
+                            <th class="px-5 py-4 text-sm font-bold text-slate-600">
+                                التاريخ
+                            </th>
+
+                            <th class="px-5 py-4 text-sm font-bold text-slate-600">
+                                المبلغ
+                            </th>
+
+                            <th class="px-5 py-4 text-sm font-bold text-slate-600">
+                                الإجراء
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody id="expenseTableBody">
+                    </tbody>
+
+                </table>
+
+            </div>
+
+
+            <!-- Mobile Cards -->
+            <div
+                id="mobileExpenseList"
+                class="md:hidden divide-y divide-slate-100">
+            </div>
+
+
+            <!-- Empty State -->
+            <div
+                id="emptyState"
+                class="hidden p-12 text-center">
+
+                <div class="w-16 h-16 mx-auto rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mb-4">
+
+                    <i data-lucide="receipt" class="w-8 h-8"></i>
+
+                </div>
+
+                <h3 class="font-bold text-slate-800 mb-1">
+                    لا توجد مصاريف
+                </h3>
+
+                <p class="text-sm text-slate-500 mb-5">
+                    لم يتم العثور على مصاريف مطابقة للفلترة الحالية.
+                </p>
+
+                <button
+                    onclick="openModal()"
+                    class="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm">
+
+                    إضافة أول مصروف
+
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================= MOBILE DATA BUTTONS ================= -->
+        <section class="sm:hidden grid grid-cols-2 gap-3 mt-5">
+
+            <button
+                onclick="exportData()"
+                class="bg-white border border-slate-200 rounded-xl py-3 flex items-center justify-center gap-2 text-sm font-semibold">
+
+                <i data-lucide="download" class="w-4 h-4"></i>
+                تصدير JSON
+
+            </button>
+
+            <label
+                class="bg-white border border-slate-200 rounded-xl py-3 flex items-center justify-center gap-2 text-sm font-semibold cursor-pointer">
+
+                <i data-lucide="upload" class="w-4 h-4"></i>
+                استيراد JSON
+
+                <input
+                    type="file"
+                    id="importFileMobile"
+                    accept=".json"
+                    class="hidden"
+                    onchange="importData(event)">
+
+            </label>
+
+        </section>
+
+    </main>
+
+
+    <!-- ================= ADD EXPENSE MODAL ================= -->
+    <div
+        id="expenseModal"
+        class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm p-4 items-center justify-center">
+
+        <div class="modal bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+
+            <!-- Modal Header -->
+            <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+
+                <div>
+
+                    <h2 class="text-xl font-extrabold text-slate-900">
+                        إضافة مصروف
+                    </h2>
+
+                    <p class="text-sm text-slate-500 mt-1">
+                        أضف تفاصيل المصروف الدراسي
+                    </p>
+
+                </div>
+
+                <button
+                    onclick="closeModal()"
+                    class="w-9 h-9 rounded-xl hover:bg-slate-100 flex items-center justify-center">
+
+                    <i data-lucide="x" class="w-5 h-5"></i>
+
+                </button>
+
+            </div>
+
+
+            <!-- Form -->
+            <form
+                id="expenseForm"
+                onsubmit="addExpense(event)"
+                class="p-5 space-y-5">
+
+                <!-- Description -->
+                <div>
+
+                    <label
+                        for="description"
+                        class="block text-sm font-bold text-slate-700 mb-2">
+                        وصف المصروف
+                    </label>
+
+                    <input
+                        type="text"
+                        id="description"
+                        required
+                        maxlength="100"
+                        placeholder="مثال: شراء كتاب الرياضيات"
+                        class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+
+                </div>
+
+
+                <!-- Amount -->
+                <div>
+
+                    <label
+                        for="amount"
+                        class="block text-sm font-bold text-slate-700 mb-2">
+                        المبلغ
+                    </label>
+
+                    <div class="relative">
+
+                        <input
+                            type="number"
+                            id="amount"
+                            required
+                            min="0.01"
+                            step="0.01"
+                            placeholder="0.00"
+                            class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 pl-16">
+
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400">
+                            جنيه
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Date -->
+                <div>
+
+                    <label
+                        for="date"
+                        class="block text-sm font-bold text-slate-700 mb-2">
+                        التاريخ
+                    </label>
+
+                    <input
+                        type="date"
+                        id="date"
+                        required
+                        class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+
+                </div>
+
+
+                <!-- Category -->
+                <div>
+
+                    <label
+                        for="category"
+                        class="block text-sm font-bold text-slate-700 mb-2">
+                        التصنيف
+                    </label>
+
+                    <select
+                        id="category"
+                        required
+                        class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white outline-none focus:ring-2 focus:ring-indigo-500">
+
+                        <option value="">
+                            اختر التصنيف
+                        </option>
+
+                        <option value="الدروس الخصوصية">
+                            الدروس الخصوصية
+                        </option>
+
+                        <option value="الكتب والمذكرات">
+                            الكتب والمذكرات
+                        </option>
+
+                        <option value="الأدوات المكتبية">
+                            الأدوات المكتبية
+                        </option>
+
+                        <option value="الاشتراكات والإنترنت">
+                            الاشتراكات والإنترنت
+                        </option>
+
+                        <option value="مصاريف أخرى">
+                            مصاريف أخرى
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- Buttons -->
+                <div class="flex gap-3 pt-2">
+
+                    <button
+                        type="button"
+                        onclick="closeModal()"
+                        class="flex-1 px-4 py-3 rounded-xl border border-slate-200 hover:bg-slate-50 font-bold">
+
+                        إلغاء
+
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="flex-1 px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-md shadow-indigo-200">
+
+                        حفظ المصروف
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <!-- ================= DELETE MODAL ================= -->
+    <div
+        id="deleteModal"
+        class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm p-4 items-center justify-center">
+
+        <div class="modal bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mb-4">
+
+                <i data-lucide="trash-2" class="w-7 h-7"></i>
+
+            </div>
+
+            <h2 class="text-lg font-extrabold text-slate-900 mb-2">
+                حذف المصروف؟
+            </h2>
+
+            <p class="text-sm text-slate-500 mb-6">
+                هل أنت متأكد من حذف هذا المصروف؟ لا يمكن التراجع عن هذه العملية.
+            </p>
+
+            <div class="flex gap-3">
+
+                <button
+                    onclick="closeDeleteModal()"
+                    class="flex-1 px-4 py-3 rounded-xl border border-slate-200 font-bold hover:bg-slate-50">
+
+                    إلغاء
+
+                </button>
+
+                <button
+                    onclick="confirmDelete()"
+                    class="flex-1 px-4 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold">
+
+                    حذف
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ================= TOAST ================= -->
+    <div
+        id="toast"
+        class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-[60]">
+
+        <div
+            id="toastContent"
+            class="bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 text-sm font-semibold">
+
+            <i
+                id="toastIcon"
+                data-lucide="check-circle"
+                class="w-5 h-5">
+            </i>
+
+            <span id="toastMessage">
+                تم بنجاح
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <!-- ================= JAVASCRIPT ================= -->
+    <script>
+
+        // ============================================
+        // DATA
+        // ============================================
+
+        const STORAGE_KEY = "twoBacExpenses";
+
+        let expenses = JSON.parse(
+            localStorage.getItem(STORAGE_KEY)
+        ) || [];
+
+        let deleteExpenseId = null;
+
+
+        // ============================================
+        // DOM ELEMENTS
+        // ============================================
+
+        const modal = document.getElementById("expenseModal");
+        const deleteModal = document.getElementById("deleteModal");
+        const expenseForm = document.getElementById("expenseForm");
+
+        const totalAmount = document.getElementById("totalAmount");
+        const topCategory = document.getElementById("topCategory");
+        const topCategoryAmount = document.getElementById("topCategoryAmount");
+        const transactionCount = document.getElementById("transactionCount");
+
+        const expenseTableBody = document.getElementById("expenseTableBody");
+        const mobileExpenseList = document.getElementById("mobileExpenseList");
+        const emptyState = document.getElementById("emptyState");
+
+        const monthFilter = document.getElementById("monthFilter");
+        const categoryFilter = document.getElementById("categoryFilter");
+
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+
+        document.addEventListener("DOMContentLoaded", () => {
+
+            setTodayDate();
+
+            renderExpenses();
+
+            lucide.createIcons();
+
+        });
+
+
+        // ============================================
+        // SET TODAY DATE
+        // ============================================
+
+        function setTodayDate() {
+
+            const today = new Date();
+
+            const year = today.getFullYear();
+
+            const month = String(
+                today.getMonth() + 1
+            ).padStart(2, "0");
+
+            const day = String(
+                today.getDate()
+            ).padStart(2, "0");
+
+            document.getElementById("date").value =
+                `${year}-${month}-${day}`;
+        }
+
+
+        // ============================================
+        // OPEN MODAL
+        // ============================================
+
+        function openModal() {
+
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+
+            setTimeout(() => {
+                document.getElementById("description").focus();
+            }, 100);
+
+        }
+
+
+        // ============================================
+        // CLOSE MODAL
+        // ============================================
+
+        function closeModal() {
+
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+
+            expenseForm.reset();
+
+            setTodayDate();
+
+        }
+
+
+        // ============================================
+        // ADD EXPENSE
+        // ============================================
+
+        function addExpense(event) {
+
+            event.preventDefault();
+
+            const description =
+                document.getElementById("description").value.trim();
+
+            const amount =
+                Number(document.getElementById("amount").value);
+
+            const date =
+                document.getElementById("date").value;
+
+            const category =
+                document.getElementById("category").value;
+
+
+            // Validation
+
+            if (!description) {
+
+                showToast(
+                    "يرجى إدخال وصف المصروف",
+                    "error"
+                );
+
+                return;
+            }
+
+
+            if (!amount || amount <= 0) {
+
+                showToast(
+                    "يرجى إدخال مبلغ صحيح",
+                    "error"
+                );
+
+                return;
+            }
+
+
+            if (!date) {
+
+                showToast(
+                    "يرجى اختيار التاريخ",
+                    "error"
+                );
+
+                return;
+            }
+
+
+            if (!category) {
+
+                showToast(
+                    "يرجى اختيار التصنيف",
+                    "error"
+                );
+
+                return;
+            }
+
+
+            // Create expense
+
+            const expense = {
+
+                id: Date.now(),
+
+                description: description,
+
+                amount: amount,
+
+                date: date,
+
+                category: category,
+
+                createdAt: new Date().toISOString()
+
+            };
+
+
+            // Add to array
+
+            expenses.push(expense);
+
+
+            // Save
+
+            saveData();
+
+
+            // Refresh
+
+            renderExpenses();
+
+
+            // Close
+
+            closeModal();
+
+
+            // Notification
+
+            showToast(
+                "تمت إضافة المصروف بنجاح",
+                "success"
+            );
+
+        }
+
+
+        // ============================================
+        // SAVE DATA
+        // ============================================
+
+        function saveData() {
+
+            localStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify(expenses)
+            );
+
+        }
+
+
+        // ============================================
+        // GET FILTERED EXPENSES
+        // ============================================
+
+        function getFilteredExpenses() {
+
+            const selectedMonth =
+                monthFilter.value;
+
+            const selectedCategory =
+                categoryFilter.value;
+
+
+            return expenses.filter(expense => {
+
+                const matchesMonth =
+                    !selectedMonth ||
+                    expense.date.startsWith(selectedMonth);
+
+
+                const matchesCategory =
+                    selectedCategory === "all" ||
+                    expense.category === selectedCategory;
+
+
+                return matchesMonth && matchesCategory;
+
+            });
+
+        }
+
+
+        // ============================================
+        // RENDER EXPENSES
+        // ============================================
+
+        function renderExpenses() {
+
+            const filteredExpenses =
+                getFilteredExpenses();
+
+
+            // Sort newest first
+
+            filteredExpenses.sort(
+                (a, b) =>
+                    new Date(b.date) -
+                    new Date(a.date)
+            );
+
+
+            // Clear
+
+            expenseTableBody.innerHTML = "";
+
+            mobileExpenseList.innerHTML = "";
+
+
+            // Empty state
+
+            if (filteredExpenses.length === 0) {
+
+                emptyState.classList.remove("hidden");
+
+            } else {
+
+                emptyState.classList.add("hidden");
+
+            }
+
+
+            // Desktop rows
+
+            filteredExpenses.forEach(expense => {
+
+                const row =
+                    document.createElement("tr");
+
+                row.className =
+                    "expense-row border-b border-slate-100";
+
+
+                row.innerHTML = `
+
+                    <td class="px-5 py-4">
+
+                        <div class="font-bold text-slate-800">
+                            ${escapeHTML(expense.description)}
+                        </div>
+
+                    </td>
+
+
+                    <td class="px-5 py-4">
+
+                        <span class="
+                            inline-flex
+                            px-3
+                            py-1
+                            rounded-full
+                            bg-indigo-50
+                            text-indigo-600
+                            text-xs
+                            font-bold
+                        ">
+                            ${escapeHTML(expense.category)}
+                        </span>
+
+                    </td>
+
+
+                    <td class="px-5 py-4 text-sm text-slate-500">
+                        ${formatDate(expense.date)}
+                    </td>
+
+
+                    <td class="px-5 py-4">
+
+                        <span class="font-extrabold text-slate-900">
+                            ${formatMoney(expense.amount)}
+                        </span>
+
+                    </td>
+
+
+                    <td class="px-5 py-4">
+
+                        <button
+                            onclick="askDelete(${expense.id})"
+                            class="
+                                w-9
+                                h-9
+                                rounded-xl
+                                text-red-500
+                                hover:bg-red-50
+                                flex
+                                items-center
+                                justify-center
+                            ">
+
+                            <i
+                                data-lucide="trash-2"
+                                class="w-4 h-4">
+                            </i>
+
+                        </button>
+
+                    </td>
+
+                `;
+
+
+                expenseTableBody.appendChild(row);
+
+            });
+
+
+            // Mobile cards
+
+            filteredExpenses.forEach(expense => {
+
+                const card =
+                    document.createElement("div");
+
+                card.className =
+                    "p-5";
+
+
+                card.innerHTML = `
+
+                    <div class="flex items-start justify-between gap-4">
+
+                        <div class="min-w-0">
+
+                            <h3 class="
+                                font-bold
+                                text-slate-800
+                                truncate
+                                mb-2
+                            ">
+                                ${escapeHTML(expense.description)}
+                            </h3>
+
+
+                            <div class="flex flex-wrap items-center gap-2">
+
+                                <span class="
+                                    px-2.5
+                                    py-1
+                                    rounded-full
+                                    bg-indigo-50
+                                    text-indigo-600
+                                    text-xs
+                                    font-bold
+                                ">
+                                    ${escapeHTML(expense.category)}
+                                </span>
+
+
+                                <span class="text-xs text-slate-400">
+                                    ${formatDate(expense.date)}
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+                        <button
+                            onclick="askDelete(${expense.id})"
+                            class="
+                                shrink-0
+                                w-9
+                                h-9
+                                rounded-xl
+                                text-red-500
+                                hover:bg-red-50
+                                flex
+                                items-center
+                                justify-center
+                            ">
+
+                            <i
+                                data-lucide="trash-2"
+                                class="w-4 h-4">
+                            </i>
+
+                        </button>
+
+                    </div>
+
+
+                    <div class="
+                        mt-4
+                        pt-4
+                        border-t
+                        border-slate-100
+                        flex
+                        items-center
+                        justify-between
+                    ">
+
+                        <span class="text-sm text-slate-500">
+                            المبلغ
+                        </span>
+
+                        <span class="font-extrabold text-lg text-slate-900">
+                            ${formatMoney(expense.amount)}
+                        </span>
+
+                    </div>
+
+                `;
+
+
+                mobileExpenseList.appendChild(card);
+
+            });
+
+
+            updateStatistics(filteredExpenses);
+
+            lucide.createIcons();
+
+        }
+
+
+        // ============================================
+        // UPDATE STATISTICS
+        // ============================================
+
+        function updateStatistics(data) {
+
+            // Total amount
+
+            const total =
+                data.reduce(
+                    (sum, expense) =>
+                        sum + Number(expense.amount),
+                    0
+                );
+
+
+            totalAmount.textContent =
+                formatMoney(total);
+
+
+            // Number of transactions
+
+            transactionCount.textContent =
+                data.length;
+
+
+            // Categories
+
+            const categoryTotals = {};
+
+
+            data.forEach(expense => {
+
+                if (!categoryTotals[expense.category]) {
+
+                    categoryTotals[expense.category] = 0;
+
+                }
+
+
+                categoryTotals[expense.category] +=
+                    Number(expense.amount);
+
+            });
+
+
+            const categories =
+                Object.entries(categoryTotals);
+
+
+            if (categories.length === 0) {
+
+                topCategory.textContent =
+                    "لا يوجد";
+
+                topCategoryAmount.textContent =
+                    "0.00";
+
+                return;
+            }
+
+
+            // Find highest category
+
+            categories.sort(
+                (a, b) => b[1] - a[1]
+            );
+
+
+            const highest =
+                categories[0];
+
+
+            topCategory.textContent =
+                highest[0];
+
+            topCategoryAmount.textContent =
+                formatMoney(highest[1]);
+
+        }
+
+
+        // ============================================
+        // ASK DELETE
+        // ============================================
+
+        function askDelete(id) {
+
+            deleteExpenseId = id;
+
+            deleteModal.classList.remove("hidden");
+            deleteModal.classList.add("flex");
+
+        }
+
+
+        // ============================================
+        // CLOSE DELETE MODAL
+        // ============================================
+
+        function closeDeleteModal() {
+
+            deleteModal.classList.add("hidden");
+            deleteModal.classList.remove("flex");
+
+            deleteExpenseId = null;
+
+        }
+
+
+        // ============================================
+        // CONFIRM DELETE
+        // ============================================
+
+        function confirmDelete() {
+
+            if (!deleteExpenseId) {
+                return;
+            }
+
+
+            expenses =
+                expenses.filter(
+                    expense =>
+                        expense.id !== deleteExpenseId
+                );
+
+
+            saveData();
+
+            renderExpenses();
+
+            closeDeleteModal();
+
+
+            showToast(
+                "تم حذف المصروف",
+                "success"
+            );
+
+        }
+
+
+        // ============================================
+        // RESET FILTERS
+        // ============================================
+
+        function resetFilters() {
+
+            monthFilter.value = "";
+
+            categoryFilter.value = "all";
+
+            renderExpenses();
+
+        }
+
+
+        // ============================================
+        // EXPORT JSON
+        // ============================================
+
+        function exportData() {
+
+            if (expenses.length === 0) {
+
+                showToast(
+                    "لا توجد بيانات لتصديرها",
+                    "error"
+                );
+
+                return;
+            }
+
+
+            const data = {
+
+                app: "2 Bac Expense Tracker",
+
+                version: "1.0",
+
+                exportedAt:
+                    new Date().toISOString(),
+
+                expenses: expenses
+
+            };
+
+
+            const json =
+                JSON.stringify(
+                    data,
+                    null,
+                    4
+                );
+
+
+            const blob =
+                new Blob(
+                    [json],
+                    {
+                        type: "application/json"
+                    }
+                );
+
+
+            const url =
+                URL.createObjectURL(blob);
+
+
+            const link =
+                document.createElement("a");
+
+
+            link.href = url;
+
+
+            const date =
+                new Date()
+                    .toISOString()
+                    .slice(0, 10);
+
+
+            link.download =
+                `2bac-expenses-${date}.json`;
+
+
+            document.body.appendChild(link);
+
+            link.click();
+
+            link.remove();
+
+
+            URL.revokeObjectURL(url);
+
+
+            showToast(
+                "تم تصدير البيانات بنجاح",
+                "success"
+            );
+
+        }
+
+
+        // ============================================
+        // IMPORT JSON
+        // ============================================
+
+        function importData(event) {
+
+            const file =
+                event.target.files[0];
+
+
+            if (!file) {
+                return;
+            }
+
+
+            const reader =
+                new FileReader();
+
+
+            reader.onload = function(e) {
+
+                try {
+
+                    const imported =
+                        JSON.parse(e.target.result);
+
+
+                    let importedExpenses;
+
+
+                    // Support exported format
+
+                    if (
+                        imported &&
+                        Array.isArray(imported.expenses)
+                    ) {
+
+                        importedExpenses =
+                            imported.expenses;
+
+                    }
+
+                    // Also support direct array
+
+                    else if (
+                        Array.isArray(imported)
+                    ) {
+
+                        importedExpenses =
+                            imported;
+
+                    }
+
+                    else {
+
+                        throw new Error(
+                            "Invalid format"
+                        );
+
+                    }
+
+
+                    // Validate data
+
+                    const validExpenses =
+                        importedExpenses.filter(expense =>
+
+                            expense &&
+                            expense.description &&
+                            Number(expense.amount) > 0 &&
+                            expense.date &&
+                            expense.category
+
+                        );
+
+
+                    if (
+                        validExpenses.length === 0 &&
+                        importedExpenses.length > 0
+                    ) {
+
+                        throw new Error(
+                            "No valid expenses"
+                        );
+
+                    }
+
+
+                    // Ask user whether to replace or merge
+
+                    const replace =
+                        confirm(
+                            "اضغط موافق لاستبدال البيانات الحالية بالبيانات المستوردة.\n\nاضغط إلغاء لدمج البيانات المستوردة مع البيانات الحالية."
+                        );
+
+
+                    if (replace) {
+
+                        expenses =
+                            validExpenses.map(
+                                normalizeExpense
+                            );
+
+                    } else {
+
+                        const newExpenses =
+                            validExpenses.map(
+                                normalizeExpense
+                            );
+
+
+                        expenses =
+                            [
+                                ...expenses,
+                                ...newExpenses
+                            ];
+
+                    }
+
+
+                    saveData();
+
+                    renderExpenses();
+
+
+                    showToast(
+                        "تم استيراد البيانات بنجاح",
+                        "success"
+                    );
+
+                }
+
+                catch (error) {
+
+                    showToast(
+                        "ملف JSON غير صالح",
+                        "error"
+                    );
+
+                }
+
+
+                // Reset input
+
+                event.target.value = "";
+
+            };
+
+
+            reader.readAsText(file);
+
+        }
+
+
+        // ============================================
+        // NORMALIZE IMPORTED EXPENSE
+        // ============================================
+
+        function normalizeExpense(expense) {
+
+            return {
+
+                id:
+                    expense.id ||
+                    Date.now() +
+                    Math.random(),
+
+                description:
+                    String(expense.description),
+
+                amount:
+                    Number(expense.amount),
+
+                date:
+                    String(expense.date),
+
+                category:
+                    String(expense.category),
+
+                createdAt:
+                    expense.createdAt ||
+                    new Date().toISOString()
+
+            };
+
+        }
+
+
+        // ============================================
+        // FORMAT MONEY
+        // ============================================
+
+        function formatMoney(value) {
+
+            return Number(value)
+                .toLocaleString(
+                    "ar-EG",
+                    {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    }
+                ) + " جنيه";
+
+        }
+
+
+        // ============================================
+        // FORMAT DATE
+        // ============================================
+
+        function formatDate(dateString) {
+
+            const date =
+                new Date(
+                    dateString + "T00:00:00"
+                );
+
+
+            if (isNaN(date)) {
+
+                return dateString;
+
+            }
+
+
+            return date.toLocaleDateString(
+                "ar-EG",
+                {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric"
+                }
+            );
+
+        }
+
+
+        // ============================================
+        // ESCAPE HTML
+        // ============================================
+
+        function escapeHTML(value) {
+
+            return String(value)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+
+        }
+
+
+        // ============================================
+        // TOAST
+        // ============================================
+
+        function showToast(
+            message,
+            type = "success"
+        ) {
+
+            const toast =
+                document.getElementById("toast");
+
+            const toastContent =
+                document.getElementById("toastContent");
+
+            const toastMessage =
+                document.getElementById("toastMessage");
+
+            const toastIcon =
+                document.getElementById("toastIcon");
+
+
+            toastMessage.textContent =
+                message;
+
+
+            if (type === "error") {
+
+                toastContent.className =
+                    "bg-red-600 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 text-sm font-semibold";
+
+                toastIcon.setAttribute(
+                    "data-lucide",
+                    "circle-alert"
+                );
+
+            } else {
+
+                toastContent.className =
+                    "bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 text-sm font-semibold";
+
+                toastIcon.setAttribute(
+                    "data-lucide",
+                    "check-circle"
+                );
+
+            }
+
+
+            toast.classList.remove("hidden");
+
+            toast.classList.add("toast");
+
+
+            lucide.createIcons();
+
+
+            setTimeout(() => {
+
+                toast.classList.add("hidden");
+
+            }, 3000);
+
+        }
+
+
+        // ============================================
+        // CLOSE MODALS BY CLICKING OUTSIDE
+        // ============================================
+
+        modal.addEventListener(
+            "click",
+            function(event) {
+
+                if (event.target === modal) {
+
+                    closeModal();
+
+                }
+
+            }
+        );
+
+
+        deleteModal.addEventListener(
+            "click",
+            function(event) {
+
+                if (event.target === deleteModal) {
+
+                    closeDeleteModal();
+
+                }
+
+            }
+        );
+
+
+        // ============================================
+        // ESC KEY
+        // ============================================
+
+        document.addEventListener(
+            "keydown",
+            function(event) {
+
+                if (event.key === "Escape") {
+
+                    closeModal();
+
+                    closeDeleteModal();
+
+                }
+
+            }
+        );
+
+
+    </script>
+
+</body>
+</html>
